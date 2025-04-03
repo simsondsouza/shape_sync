@@ -13,17 +13,10 @@ import pyrealsense2 as rs
 # Load YOLO model
 model_path = os.path.join(os.getcwd(), "object_detection_weights_50_epochs.pt")
 model = YOLO(model_path)
-
-# Initialize ROS node
-rospy.init_node('yolo_object_detector')
-bridge = CvBridge()
+model = model.cuda()
 
 # Publisher for processed image
 processed_image_pub = rospy.Publisher("/camera/color/processed_image", Image, queue_size=1)
-
-# Initialize Franka arm
-fa = FrankaArm()
-fa.reset_joints()
 
 # RealSense Camera setup (assuming depth and color are aligned)
 pipeline = rs.pipeline()
@@ -33,10 +26,10 @@ config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
 pipeline.start(config)
 
 # Camera intrinsic parameters (replace with actual calibration values)
-fx = 609.5  # Focal length in x-axis
-fy = 609.5  # Focal length in y-axis
-cx = 320.0  # Principal point in x-axis
-cy = 240.0  # Principal point in y-axis
+fx = 926.4746704101562  # Focal length in x-axis
+fy = 925.6631469726562  # Focal length in y-axis
+cx = 627.109619140625 # Principal point in x-axis
+cy = 369.2387390136719  # Principal point in y-axis
 
 def get_depth_at_pixel(x, y):
     """Get depth value at pixel (x, y) in the image."""
@@ -47,7 +40,7 @@ def get_depth_at_pixel(x, y):
 
 def detect_knob_center(cropped_img):
     """Detects the center of a knob in the cropped object region."""
-    hsv = cv2.cvtColor(cropped_img, cv2.COLOR_RGB2HSV)
+    hsv = cv2.cvtColor(cropped_img, cv2.COLOR_BGR2HSV)
     lower_brown = np.array([5, 80, 10])
     upper_brown = np.array([15, 255, 190])
     mask = cv2.inRange(hsv, lower_brown, upper_brown)
@@ -68,7 +61,7 @@ def image_callback(msg, user_shape):
     """ROS Image callback function."""
     try:
         image = bridge.imgmsg_to_cv2(msg, "bgr8")
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         results = model(image)
 
         for result in results:
@@ -127,13 +120,23 @@ def image_callback(msg, user_shape):
                         Move(rot, trans, fa)
 
         # Convert back to ROS image and publish
-        processed_msg = bridge.cv2_to_imgmsg(cv2.cvtColor(image, cv2.COLOR_RGB2BGR), "bgr8")
+        # processed_msg = bridge.cv2_to_imgmsg(cv2.cvtColor(image, cv2.COLOR_RGB2BGR), "bgr8")
+        processed_msg = bridge.cv2_to_imgmsg(image, "bgr8")
         processed_image_pub.publish(processed_msg)
     except Exception as e:
         rospy.logerr(f"Error processing image: {e}")
 
 # Main entry point
 if __name__ == "__main__":
+    # Initialize Franka arm
+    fa = FrankaArm()
+    fa.reset_joints()
+    start = time.time()
+
+    # Initialize ROS node
+    # rospy.init_node('yolo_object_detector')
+    bridge = CvBridge()
+    
     # Get user input for the shape to detect
     user_shape = input("Enter the shape to detect (Diamond, Square, Rectangle, Triangle, Circle, Oval, Pentagon, Octagon): ")
 

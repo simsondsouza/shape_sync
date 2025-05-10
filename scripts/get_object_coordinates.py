@@ -39,7 +39,6 @@ def image_callback(msg):
     """ROS Image callback function."""
     try:
         image = bridge.imgmsg_to_cv2(msg, "bgr8")
-        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         results = model(image)
 
         for result in results:
@@ -68,7 +67,6 @@ def image_callback(msg):
                     rospy.loginfo(f"Detected knob center at ({knob_x}, {knob_y}) in object {object_name}")
 
         # Convert back to ROS image and publish
-        # processed_msg = bridge.cv2_to_imgmsg(cv2.cvtColor(image, cv2.COLOR_RGB2BGR), "bgr8")
         processed_msg = bridge.cv2_to_imgmsg(image, "bgr8")
         processed_image_pub.publish(processed_msg)
     except Exception as e:
@@ -82,7 +80,6 @@ if __name__ == "__main__":
     start = time.time()
 
     # Initialize ROS node
-    # rospy.init_node('yolo_object_detector')
     bridge = CvBridge()
 
     # Move robot to initial position
